@@ -1,0 +1,39 @@
+{
+    "Comment": "A description of my state machine",
+    "StartAt": "LambdaInvoke",
+    "States": {
+      "LambdaInvoke": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:us-east-1:533717254318:function:FinalOrderCreation:$LATEST",
+          "Payload.$": "$"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 2,
+            "MaxAttempts": 6,
+            "BackoffRate": 2
+          }
+        ],
+        "InputPath": "$.Comment",
+        "Next": "SNS Publish"
+      },
+      "SNS Publish": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::sns:publish",
+        "Parameters": {
+          "TopicArn": "arn:aws:sns:us-east-1:533717254318:OrderTopic",
+          "Message.$": "$"
+        },
+        "End": true,
+        "InputPath": "$.Payload"
+      }
+    }
+  }
