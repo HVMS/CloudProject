@@ -1,0 +1,91 @@
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: sanjay1699
+      AccessControl: Private
+      # For how much time you want to lock
+      ObjectLockEnabled: false
+      VersioningConfiguration:
+        Status: Suspended
+      # Security purpose
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+            BucketKeyEnabled: true
+  MyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      # Putting an object policy into s3 bucket
+      PolicyDocument:
+        Statement:
+          - Action:
+            - 's3:PutObject'
+            Effect: Allow
+            Principal: '*'
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref S3Bucket
+              - /*
+  ZipFileBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: sanjaylambdazips
+      AccessControl: Private
+      ObjectLockEnabled: false
+      VersioningConfiguration:
+        Status: Suspended
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+            BucketKeyEnabled: true
+  ZipFileBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ZipFileBucket
+      PolicyDocument:
+        Statement:
+          - Action:
+            - 's3:PutObject'
+            Effect: Allow
+            Principal: '*'
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref ZipFileBucket
+              - /*
+  StateMachineDefinitionBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: viru1699statemachine
+      AccessControl: Private
+      ObjectLockEnabled: false
+      VersioningConfiguration:
+        Status: Suspended
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+            BucketKeyEnabled: true
+  StateMachineDefinitionBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StateMachineDefinitionBucket
+      PolicyDocument:
+        Statement:
+          - Action:
+            - 's3:PutObject'
+            Effect: Allow
+            Principal: '*'
+            Resource: !Join
+            - ''
+            - - 'arn:aws:s3:::'
+              - !Ref StateMachineDefinitionBucket
+              - /*

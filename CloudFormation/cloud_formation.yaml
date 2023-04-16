@@ -1,0 +1,359 @@
+Resources:
+  MySNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: "Order SNS Topic for Email"
+        TopicName: "OrderTopic"
+  MySubcriptionTopic:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: 'email'
+        Region: 'us-east-1'
+        Endpoint: 'xrdctfghvbjn@gmail.com'
+        TopicArn: !Ref 'MySNSTopic'
+  LoginUserAPIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'LoginAPI'
+  LoginResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref 'LoginUserAPIGateway'
+      ParentId: !GetAtt
+        - LoginUserAPIGateway
+        - RootResourceId
+      PathPart: login
+  LoginMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: "POST"
+      AuthorizationType: NONE
+      ResourceId: !Ref LoginResource
+      RestApiId: !Ref 'LoginUserAPIGateway'
+      Integration:
+        TimeoutInMillis: 25000 
+        IntegrationHttpMethod: 'POST'
+        Type: AWS
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
+  LoginLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures: 
+      - "arm64"
+      Description: "Login lambda and check email and password from DB"
+      FunctionName: "FinalLoginLambda"
+      Role: arn:aws:iam::533717254318:role/LabRole
+      Runtime: python3.9
+      Handler: login_lambda.lambda_handler
+      Code:
+        S3Bucket: sanjaylambdazips
+        S3Key: login_lambda.zip
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: 'UserTable'
+  LoginLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LoginLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LoginUserAPIGateway}/*/POST/login
+  LoginUserAPIDeployment:
+    DependsOn: LoginMethodResource
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref LoginUserAPIGateway
+      StageName: 'prod'
+  RegisterUserAPIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'RegisterAPI'
+  RegisterResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref 'RegisterUserAPIGateway'
+      ParentId: !GetAtt
+        - RegisterUserAPIGateway
+        - RootResourceId
+      PathPart: register
+  RegisterMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: "POST"
+      AuthorizationType: NONE
+      ResourceId: !Ref RegisterResource
+      RestApiId: !Ref 'RegisterUserAPIGateway'
+      Integration:
+        TimeoutInMillis: 29000 
+        IntegrationHttpMethod: 'POST'
+        Type: AWS
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RegisterLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
+  RegisterLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures: 
+      - "arm64"
+      Description: "User Registration and store data into dynamoDB"
+      FunctionName: "FinalRegisterLambda"
+      Role: arn:aws:iam::533717254318:role/LabRole
+      Runtime: python3.9
+      Handler: register_lambda.lambda_handler
+      Code:
+        S3Bucket: sanjaylambdazips
+        S3Key: register_lambda.zip
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: 'UserTable'
+          TOPIC_ARN: 'arn:aws:sns:us-east-1:533717254318:OrderTopic'
+  RegisterLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RegisterLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RegisterUserAPIGateway}/*/POST/register
+  RegisterUserAPIDeployment:
+    DependsOn: RegisterMethodResource
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref RegisterUserAPIGateway
+      StageName: 'prod'
+  OrderCreationGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'OrderCreation'
+  OrderResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref 'OrderCreationGateway'
+      ParentId: !GetAtt
+        - OrderCreationGateway
+        - RootResourceId
+      PathPart: createOrder
+  OrderMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: "POST"
+      AuthorizationType: NONE
+      ResourceId: !Ref OrderResource
+      RestApiId: !Ref 'OrderCreationGateway'
+  MyInventoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName:  "veges_item"
+          AttributeType:  "S"
+      KeySchema: 
+        - 
+          AttributeName: "veges_item"
+          KeyType: "HASH"
+      BillingMode: 'PAY_PER_REQUEST'
+      TableName: "VegetableInventoryTable"
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName:  "email"
+          AttributeType:  "S"
+      KeySchema: 
+        - 
+          AttributeName: "email"
+          KeyType: "HASH"
+      BillingMode: 'PAY_PER_REQUEST'
+      TableName: "UserTable"
+  InventoryVegetablesAPIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'InventoryVegetablesAPI'
+  VegetablesResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref 'InventoryVegetablesAPIGateway'
+      ParentId: !GetAtt
+        - InventoryVegetablesAPIGateway
+        - RootResourceId
+      PathPart: vegetables
+  VegetablesMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: 'POST'
+      AuthorizationType: NONE
+      ResourceId: !Ref VegetablesResource
+      RestApiId: !Ref 'InventoryVegetablesAPIGateway'
+      Integration:
+        TimeoutInMillis: 29000 
+        IntegrationHttpMethod: 'POST'
+        Type: AWS
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VegetableInventoryLambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
+  VegetableInventoryLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures: 
+      - "arm64"
+      Description: "creates list of vegetables inside dynamo db table"
+      FunctionName: "VegesInventory"
+      Role: arn:aws:iam::533717254318:role/LabRole
+      Runtime: python3.9
+      Handler: veges_lambda.lambda_handler
+      Code:
+        S3Bucket: sanjaylambdazips
+        S3Key: veges_lambda.zip
+      Timeout: 10
+  VegesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VegetableInventoryLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${InventoryVegetablesAPIGateway}/*/POST/vegetables
+  VegesInventoryAPIDeployment:
+    DependsOn: VegetablesMethodResource
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref InventoryVegetablesAPIGateway
+      StageDescription: 
+        Description: 'Veges Deployment'
+      StageName: 'prod'
+  UploadPhotoToS3APIGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: 'UploadPhoto'
+      BinaryMediaTypes:
+        - "multipart/form-data"
+        - "image/png"
+        - "image/jpeg"
+      EndpointConfiguration:
+        Types:
+          - "REGIONAL"
+  UploadPhotoResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref 'UploadPhotoToS3APIGateway'
+      ParentId: !GetAtt
+        - UploadPhotoToS3APIGateway
+        - RootResourceId
+      PathPart: uploadphoto
+  UploadPhotoMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: 'POST'
+      AuthorizationType: NONE
+      ResourceId: !Ref UploadPhotoResource
+      RestApiId: !Ref 'UploadPhotoToS3APIGateway'
+      Integration:
+        Credentials: arn:aws:iam::533717254318:role/LabRole
+        TimeoutInMillis: 27000 
+        IntegrationHttpMethod: 'POST'
+        Type: AWS
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UploadPhotoToS3LambdaFunction.Arn}/invocations
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: 'WHEN_NO_TEMPLATES'
+        RequestTemplates:
+          image/jpeg: |
+            {
+              "content" : "$input.body"
+            }
+          image/png:  |
+            {
+              "content" : "$input.body"
+            }
+          multipart/form-data:  |
+            {
+              "content" : "$input.body"
+            }
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
+  UploadPhotoToS3LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures: 
+      - "arm64"
+      Description: "Uploading the binary images to S3 and pass the image string to step function"
+      FunctionName: "FinalImageUploadToS3"
+      Role: arn:aws:iam::533717254318:role/LabRole
+      Runtime: python3.9
+      Handler: upload_photo.lambda_handler
+      Code:
+        S3Bucket: sanjaylambdazips
+        S3Key: upload_photo.zip
+      Timeout: 10
+      Environment:
+        Variables:
+          BUCKET_NAME: 'sanjay1699'
+          REGION_NAME: 'us-east-1'
+          STEP_FUNCTION_ARN: !Ref MyStepFunction
+  UploadImageToS3LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UploadPhotoToS3LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${UploadPhotoToS3APIGateway}/*/POST/uploadPhoto
+  UploadImageToS3APIDeployment:
+    DependsOn: UploadPhotoMethodResource
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref UploadPhotoToS3APIGateway
+      StageDescription: 
+        Description: 'Uploading the image to s3 and store data there'
+      StageName: 'prod'
+  OrderCreationLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures: 
+      - "arm64"
+      Description: "Creates order for the uploaded photo"
+      FunctionName: "FinalOrderCreation"
+      Role: arn:aws:iam::533717254318:role/LabRole
+      Runtime: python3.9
+      Handler: order_create.lambda_handler
+      Code:
+        S3Bucket: sanjaylambdazips
+        S3Key: order_create.zip
+      Timeout: 10
+      Environment:
+        Variables:
+          BUCKET_NAME: 'sanjay1699'
+          REGION_NAME: 'us-east-1'
+  MyStepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    Properties: 
+      DefinitionS3Location:
+        Bucket: viru1699statemachine
+        Key: state_machine.json
+      RoleArn: arn:aws:iam::533717254318:role/LabRole
+      StateMachineName: sendemailnotification
+      StateMachineType: STANDARD
