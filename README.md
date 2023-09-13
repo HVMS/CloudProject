@@ -5,7 +5,7 @@
   the items are matched, the full order email will be sent otherwise a partial order will be delivered. I have focused here mostly on the backend part to use
   different types of cloud services based on storage, network, serverless functions, computing, and other services.
 
-# Architecture 
+# Backend Architecture 
 
 ![image](https://github.com/HVMS/CloudProect/assets/38061955/eafbb9eb-de7d-4b47-bbfb-f9a285405478)
 
