@@ -1,4 +1,4 @@
-# _Just Click - Online Order System based on Cloud_
+# Just Click - Online Order System based on Cloud
 
 - "Just Click" is a SAAS model system in which a user is supposed to upload an image of handwritten notes of vegetable items vs. quantity. After that using
   Amazon's Machine Learning-based service,   we will extract important information and check against the vegetable items database with the quantity. If all
