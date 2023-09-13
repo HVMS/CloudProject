@@ -11,14 +11,14 @@
 
 # Amazon Services Used
 
-- Compute Services
-  - AWS Lambda 
-  - AWS Step Function
+- Storage Services
+  - Amazon Simple Storage Service S3 ( Object Storage )
+  - Amazon DynamoDB ( NoSQL Data Storage )
 
 - Network Services
   - Amazon API Gateway ( RESTFul Architecture APIs )
  
-- Serverless Services
+- Compute Services
   - AWS Lambda ( To execute shorter computation with less time )
   - AWS Step Function ( To execute workflow seamlessly and faster execution )
  
